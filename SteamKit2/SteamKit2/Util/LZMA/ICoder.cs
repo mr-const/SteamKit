@@ -153,6 +153,6 @@ namespace SevenZip
 
 	interface ISetDecoderProperties
 	{
-		void SetDecoderProperties(byte[] properties);
+		void SetDecoderProperties(ReadOnlySpan<byte> properties);
 	}
 }

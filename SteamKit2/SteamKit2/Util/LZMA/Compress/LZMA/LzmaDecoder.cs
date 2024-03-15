@@ -356,7 +356,7 @@ namespace SevenZip.Compression.LZMA
 			m_RangeDecoder.ReleaseStream();
 		}
 
-		public void SetDecoderProperties(byte[] properties)
+		public void SetDecoderProperties(ReadOnlySpan<byte> properties)
 		{
 			if (properties.Length < 5)
 				throw new InvalidParamException();

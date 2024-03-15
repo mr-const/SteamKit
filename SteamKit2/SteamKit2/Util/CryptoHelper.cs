@@ -6,6 +6,7 @@
 
 
 using System;
+using System.Buffers;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -268,12 +269,8 @@ namespace SteamKit2
         /// <summary>
         /// Decrypts using AES/CBC/PKCS7 with an input byte array and key, using the random IV prepended using AES/ECB/None
         /// </summary>
-        static byte[] SymmetricDecrypt( byte[] input, byte[] key, out byte[] iv )
+        static byte[] SymmetricDecrypt( ReadOnlySpan<byte> input, byte[] key, out byte[] iv )
         {
-            ArgumentNullException.ThrowIfNull( input );
-
-            ArgumentNullException.ThrowIfNull( key );
-
             DebugLog.Assert( key.Length == 32, "CryptoHelper", "SymmetricDecrypt used with non 32 byte key!" );
 
             using var aes = Aes.Create();
@@ -281,13 +278,17 @@ namespace SteamKit2
             aes.KeySize = 256;
 
             // first 16 bytes of input is the ECB encrypted IV
-            byte[] cryptedIv = new byte[ 16 ];
-            iv = new byte[ cryptedIv.Length ];
-            Array.Copy( input, 0, cryptedIv, 0, cryptedIv.Length );
+            int cryptedIvLength = 16;
+            byte[] cryptedIv = ArrayPool<byte>.Shared.Rent(cryptedIvLength);
+
+            iv = new byte[ cryptedIvLength ];
+
+            input.Slice( 0, cryptedIvLength ).CopyTo( cryptedIv );
 
             // the rest is ciphertext
-            byte[] cipherText = new byte[ input.Length - cryptedIv.Length ];
-            Array.Copy( input, cryptedIv.Length, cipherText, 0, cipherText.Length );
+            int cipherTextLength = input.Length - cryptedIvLength;
+            byte[] cipherText =  ArrayPool<byte>.Shared.Rent(cipherTextLength);
+            input.Slice( cryptedIvLength, cipherTextLength ).CopyTo( cipherText );
 
             // decrypt the IV using ECB
             aes.Mode = CipherMode.ECB;
@@ -295,7 +296,7 @@ namespace SteamKit2
 
             using ( var aesTransform = aes.CreateDecryptor( key, null ) )
             {
-                iv = aesTransform.TransformFinalBlock( cryptedIv, 0, cryptedIv.Length );
+                iv = aesTransform.TransformFinalBlock( cryptedIv, 0, cryptedIvLength );
             }
 
             // decrypt the remaining ciphertext in cbc with the decrypted IV
@@ -303,16 +304,20 @@ namespace SteamKit2
             aes.Padding = PaddingMode.PKCS7;
 
             using ( var aesTransform = aes.CreateDecryptor( key, iv ) )
-            using ( var ms = new MemoryStream( cipherText ) )
+            using ( var ms = new MemoryStream( cipherText, 0, cipherTextLength ) )
             using ( var cs = new CryptoStream( ms, aesTransform, CryptoStreamMode.Read ) )
             {
                 // plaintext is never longer than ciphertext
-                byte[] plaintext = new byte[ cipherText.Length ];
+                byte[] plaintext = ArrayPool<byte>.Shared.Rent(cipherTextLength);
 
                 int len = cs.ReadAll( plaintext );
 
                 byte[] output = new byte[ len ];
                 Array.Copy( plaintext, 0, output, 0, len );
+
+                ArrayPool<byte>.Shared.Return( cipherText );
+                ArrayPool<byte>.Shared.Return(cryptedIv);
+                ArrayPool<byte>.Shared.Return(plaintext);
 
                 return output;
             }
