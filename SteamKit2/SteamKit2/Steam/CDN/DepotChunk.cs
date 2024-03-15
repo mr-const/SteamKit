@@ -75,9 +75,10 @@ namespace SteamKit2.CDN
 
             DebugLog.Assert( ChunkInfo.Checksum != null, nameof( DepotChunk ), "Expected data chunk to have a checksum." );
 
-            byte[] dataCrc = CryptoHelper.AdlerHash( processedData );
+            Adler32Zlib adler = new Adler32Zlib(0);
+            uint crc = adler.Update( processedData );
 
-            if ( !dataCrc.SequenceEqual( ChunkInfo.Checksum ) )
+            if ( crc != ChunkInfo.Checksum )
             {
                 throw new InvalidDataException( "Processed data checksum is incorrect! Downloaded depot chunk is corrupt or invalid/wrong depot key?" );
             }
