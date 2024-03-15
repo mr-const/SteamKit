@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.IO;
 using System.IO.Hashing;
 
@@ -14,31 +15,35 @@ namespace SteamKit2
         private static char Version = 'a';
 
 
-        public static byte[] Decompress(byte[] buffer)
+        public static byte[] Decompress(ReadOnlySpan<byte> buffer)
         {
-            using MemoryStream ms = new MemoryStream( buffer );
-            using BinaryReader reader = new BinaryReader( ms );
-            if ( reader.ReadUInt16() != VZipHeader )
+            if ( BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(0)) != VZipHeader )
             {
                 throw new Exception( "Expecting VZipHeader at start of stream" );
             }
 
-            if ( reader.ReadChar() != Version )
+            if ( buffer[2] != Version )
             {
                 throw new Exception( "Expecting VZip version 'a'" );
             }
 
             // Sometimes this is a creation timestamp (e.g. for Steam Client VZips).
             // Sometimes this is a CRC32 (e.g. for depot chunks).
-            /* uint creationTimestampOrSecondaryCRC = */ reader.ReadUInt32();
+            /* uint creationTimestampOrSecondaryCRC = reader.ReadUInt32(); */ // skip 4 bytes
 
-            byte[] properties = reader.ReadBytes( 5 );
-            byte[] compressedBuffer = reader.ReadBytes( ( int )ms.Length - HeaderLength - FooterLength - 5 );
+            int offset = 7;
+            ReadOnlySpan<byte> properties = buffer.Slice(offset, 5);
+            offset += properties.Length;
+            ReadOnlySpan<byte> compressedBuffer = buffer.Slice(offset, ( int )buffer.Length - HeaderLength - FooterLength - 5 );
+            offset += compressedBuffer.Length;
 
-            uint outputCRC = reader.ReadUInt32();
-            uint sizeDecompressed = reader.ReadUInt32();
+            uint outputCRC = BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(offset));
+            offset += 4;
 
-            if ( reader.ReadUInt16() != VZipFooter )
+            uint sizeDecompressed = BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(offset));
+            offset += 4;
+
+            if ( BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(offset)) != VZipFooter )
             {
                 throw new Exception( "Expecting VZipFooter at end of stream" );
             }
@@ -46,7 +51,7 @@ namespace SteamKit2
             SevenZip.Compression.LZMA.Decoder decoder = new SevenZip.Compression.LZMA.Decoder();
             decoder.SetDecoderProperties( properties );
 
-            using MemoryStream inputStream = new MemoryStream( compressedBuffer );
+            using MemoryStream inputStream = new MemoryStream( compressedBuffer.ToArray() );
             using MemoryStream outStream = new MemoryStream( ( int )sizeDecompressed );
             decoder.Code( inputStream, outStream, compressedBuffer.Length, sizeDecompressed, null );
 
