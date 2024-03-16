@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using SixLabors.ImageSharp.Compression.Zlib;
 
 namespace SteamKit2.CDN
 {
@@ -75,8 +76,7 @@ namespace SteamKit2.CDN
 
             DebugLog.Assert( ChunkInfo.Checksum != null, nameof( DepotChunk ), "Expected data chunk to have a checksum." );
 
-            Adler32Zlib adler = new Adler32Zlib(0);
-            uint crc = adler.Update( processedData );
+            uint crc = Adler32.Calculate( 0, processedData );
 
             if ( crc != ChunkInfo.Checksum )
             {
