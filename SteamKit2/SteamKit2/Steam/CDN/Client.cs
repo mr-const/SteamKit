@@ -4,7 +4,9 @@
  */
 
 using System;
+using System.Buffers;
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -83,6 +85,9 @@ namespace SteamKit2.CDN
 
             var manifestData = await DoRawCommandAsync( server, url, proxyServer ).ConfigureAwait( false );
 
+            if ( manifestData.Array == null )
+                throw new Exception( "Manifest data is null" );
+
             manifestData = ZipUtil.Decompress( manifestData );
 
             var depotManifest = new DepotManifest( manifestData );
@@ -135,9 +140,9 @@ namespace SteamKit2.CDN
             var chunkData = await DoRawCommandAsync( server, string.Format( "depot/{0}/chunk/{1}", depotId, chunkID ), proxyServer ).ConfigureAwait( false );
 
             // assert that lengths match only if the chunk has a length assigned.
-            if ( chunk.CompressedLength > 0 && chunkData.Length != chunk.CompressedLength )
+            if ( chunk.CompressedLength > 0 && chunkData.Count != chunk.CompressedLength )
             {
-                throw new InvalidDataException( $"Length mismatch after downloading depot chunk! (was {chunkData.Length}, but should be {chunk.CompressedLength})" );
+                throw new InvalidDataException( $"Length mismatch after downloading depot chunk! (was {chunkData.Count}, but should be {chunk.CompressedLength})" );
             }
 
             var depotChunk = new DepotChunk( chunk, chunkData );
@@ -151,7 +156,14 @@ namespace SteamKit2.CDN
             return depotChunk;
         }
 
-        async Task<byte[]> DoRawCommandAsync( Server server, string command, Server? proxyServer )
+        /// <summary>
+        /// Returns ArraySegment allocated using ArrayPool, subsequently it must be disposed by the receiver.
+        /// </summary>
+        /// <param name="server"></param>
+        /// <param name="command"></param>
+        /// <param name="proxyServer"></param>
+        /// <returns></returns>
+        async Task<ArraySegment<byte>> DoRawCommandAsync( Server server, string command, Server? proxyServer )
         {
             var url = BuildCommand( server, command, proxyServer );
             using var request = new HttpRequestMessage( HttpMethod.Get, url );
@@ -170,7 +182,13 @@ namespace SteamKit2.CDN
 
                 cts.CancelAfter( ResponseBodyTimeout );
 
-                return await response.Content.ReadAsByteArrayAsync( cts.Token ).ConfigureAwait( false );
+                await response.Content.LoadIntoBufferAsync().ConfigureAwait( false );
+
+                byte[] buffer = ArrayPool<byte>.Shared.Rent( 8 * 1024 * 1024 ); // 2MB
+
+                int read = await response.Content.ReadAsStream().ReadAsync(buffer, 0, buffer.Length, cts.Token).ConfigureAwait( false );
+
+                return new ArraySegment<byte>( buffer, 0, read );
             }
             catch ( Exception ex )
             {

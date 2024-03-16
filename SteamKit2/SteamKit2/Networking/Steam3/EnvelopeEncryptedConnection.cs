@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.IO.Hashing;
 using System.Net;
 using SteamKit2.Internal;
@@ -74,7 +75,8 @@ namespace SteamKit2
             if (state == EncryptionState.Encrypted)
             {
                 var plaintextData = encryption!.ProcessIncoming( e.Data );
-                NetMsgReceived?.Invoke( this, e.WithData( plaintextData ) );
+                NetMsgReceived?.Invoke( this, e.WithData( plaintextData.ToArray() ) );
+                ArrayPool<byte>.Shared.Return( plaintextData.Array! );
                 return;
             }
             

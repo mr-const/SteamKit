@@ -23,7 +23,7 @@ namespace SteamKit2
             this.log = log ?? throw new ArgumentNullException( nameof( log ) );
         }
 
-        public byte[] ProcessIncoming( byte[] data )
+        public ArraySegment<byte> ProcessIncoming( byte[] data )
         {
             try
             {

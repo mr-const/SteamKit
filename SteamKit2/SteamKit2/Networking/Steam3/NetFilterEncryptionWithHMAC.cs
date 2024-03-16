@@ -26,7 +26,7 @@ namespace SteamKit2
             Array.Copy( sessionKey, 0, hmacSecret, 0, hmacSecret.Length );
         }
 
-        public byte[] ProcessIncoming( byte[] data )
+        public ArraySegment<byte> ProcessIncoming( byte[] data )
         {
             try
             {

@@ -6,6 +6,7 @@
 
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.IO.Compression;
 using System.IO.Hashing;
@@ -24,9 +25,17 @@ namespace SteamKit2
 
         private static ushort Version = 20;
 
-        public static byte[] Decompress( byte[] buffer )
+        /// <summary>
+        /// Accepts a buffer containing a zip file and returns the decompressed data. Releases input buffer and allocates output buffer using ArrayPool.
+        /// Receiver is responsible for releasing the output buffer.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="output"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static ArraySegment<byte> Decompress( ArraySegment<byte> input )
         {
-            using MemoryStream ms = new MemoryStream( buffer );
+            using MemoryStream ms = new MemoryStream( input.Array!, input.Offset, input.Count, false, true );
             using BinaryReader reader = new BinaryReader( ms );
             if ( !PeekHeader( reader, LocalFileHeader ) )
             {
@@ -37,7 +46,7 @@ namespace SteamKit2
             uint decompressedSize;
             ushort compressionMethod;
             uint crc;
-            byte[] compressedBuffer = ReadLocalFile( reader, out fileName, out decompressedSize, out compressionMethod, out crc );
+            ReadLocalFile( reader, out fileName, out decompressedSize, out compressionMethod, out crc, out ArraySegment<byte> compressedBuffer );
 
             if ( !PeekHeader( reader, CentralDirectoryHeader ) )
             {
@@ -54,11 +63,15 @@ namespace SteamKit2
 
             /*UInt32 count =*/ ReadEndOfDirectory( reader );
 
-            byte[] decompressed;
+            ArraySegment<byte> decompressed;
 
             if ( compressionMethod == DeflateCompression )
+            {
                 decompressed = InflateBuffer( compressedBuffer, decompressedSize );
+                ArrayPool<byte>.Shared.Return( input.Array! );
+            }
             else
+                // in fact we return input array as an output without releasing it here.
                 decompressed = compressedBuffer;
 
             uint checkSum = Crc32.HashToUInt32( decompressed );
@@ -226,7 +239,7 @@ namespace SteamKit2
             return relativeOffset;
         }
 
-        private static byte[] ReadLocalFile( BinaryReader reader, out string fileName, out uint decompressedSize, out ushort compressionMethod, out uint crc )
+        private static void ReadLocalFile( BinaryReader reader, out string fileName, out uint decompressedSize, out ushort compressionMethod, out uint crc, out ArraySegment<byte> compressedBuffer )
         {
             /*UInt16 version =*/ reader.ReadUInt16();
             /*UInt16 bitflags =*/ reader.ReadUInt16();
@@ -252,18 +265,27 @@ namespace SteamKit2
 
             fileName = Encoding.UTF8.GetString( name );
 
-            return reader.ReadBytes( ( int )compressedSize );
+            // reuse input array as output buffer, because we're responsible for releasing it
+            compressedBuffer = new ArraySegment<byte>( ( ( MemoryStream )reader.BaseStream ).GetBuffer(), ( int )reader.BaseStream.Position, ( int )compressedSize );
+            
+            // skip over the compressed data
+            reader.ReadBytes( ( int )compressedSize );
         }
 
 
-        private static byte[] InflateBuffer( byte[] compressedBuffer, uint decompressedSize )
+        private static ArraySegment<byte> InflateBuffer( ArraySegment<byte> compressedBuffer, uint decompressedSize )
         {
-            using MemoryStream ms = new MemoryStream( compressedBuffer );
+            using MemoryStream ms = new MemoryStream( compressedBuffer.Array!, compressedBuffer.Offset, compressedBuffer.Count );
             using DeflateStream deflateStream = new DeflateStream( ms, CompressionMode.Decompress );
-            byte[] inflated = new byte[ decompressedSize ];
-            deflateStream.ReadAll( inflated );
+            ArraySegment<byte> inflatedSegment = new ArraySegment<byte>( 
+                ArrayPool<byte>.Shared.Rent( ( int )decompressedSize ), 
+                0, 
+                (int)decompressedSize );
 
-            return inflated;
+            deflateStream.ReadAll( inflatedSegment );
+
+            ArrayPool<byte>.Shared.Return( compressedBuffer.Array! );
+            return inflatedSegment;
         }
 
         private static byte[] DeflateBuffer( byte[] uncompressedBuffer )

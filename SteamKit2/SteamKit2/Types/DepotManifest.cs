@@ -4,6 +4,7 @@
  */
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Hashing;
@@ -168,9 +169,10 @@ namespace SteamKit2
         public uint EncryptedCRC { get; private set; }
 
 
-        internal DepotManifest(byte[] data)
+        internal DepotManifest(ArraySegment<byte> data)
         {
             InternalDeserialize(data);
+            ArrayPool<byte>.Shared.Return(data.Array!);
         }
 
         /// <summary>
@@ -198,7 +200,7 @@ namespace SteamKit2
             foreach (var file in Files)
             {
                 byte[] enc_filename = Convert.FromBase64String(file.FileName);
-                byte[] filename;
+                ArraySegment<byte> filename;
                 try
                 {
                     filename = CryptoHelper.SymmetricDecrypt(enc_filename, encryptionKey);
@@ -209,6 +211,7 @@ namespace SteamKit2
                 }
 
                 file.FileName = Encoding.UTF8.GetString( filename ).TrimEnd( '\0' ).Replace(altDirChar, Path.DirectorySeparatorChar);
+                ArrayPool<byte>.Shared.Return(filename.Array!);
             }
 
             // Sort file entries alphabetically because that's what Steam does
@@ -254,13 +257,13 @@ namespace SteamKit2
             return Deserialize( ms.ToArray() );
         }
 
-        void InternalDeserialize(byte[] data)
+        void InternalDeserialize(ArraySegment<byte> data)
         {
             ContentManifestPayload? payload = null;
             ContentManifestMetadata? metadata = null;
             ContentManifestSignature? signature = null;
 
-            using ( var ms = new MemoryStream( data ) )
+            using ( var ms = new MemoryStream( data.Array!, data.Offset, data.Count ) )
             using ( var br = new BinaryReader( ms ) )
             {
                 while ( ( ms.Length - ms.Position ) > 0 )

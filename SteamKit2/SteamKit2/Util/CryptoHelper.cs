@@ -220,10 +220,8 @@ namespace SteamKit2
         /// <summary>
         /// Decrypts using AES/CBC/PKCS7 with an input byte array and key, using the random IV prepended using AES/ECB/None
         /// </summary>
-        public static byte[] SymmetricDecrypt( byte[] input, byte[] key )
+        public static ArraySegment<byte> SymmetricDecrypt( ReadOnlySpan<byte> input, byte[] key )
         {
-            ArgumentNullException.ThrowIfNull( input );
-
             ArgumentNullException.ThrowIfNull( key );
 
             return SymmetricDecrypt( input, key, out _ );
@@ -232,7 +230,7 @@ namespace SteamKit2
         /// <summary>
         /// Decrypts using AES/CBC/PKCS7 with an input byte array and key, using the IV (comprised of random bytes and the HMAC-SHA1 of the random bytes and plaintext) prepended using AES/ECB/None
         /// </summary>
-        public static byte[] SymmetricDecryptHMACIV( byte[] input, byte[] key, byte[] hmacSecret )
+        public static ArraySegment<byte> SymmetricDecryptHMACIV( byte[] input, byte[] key, byte[] hmacSecret )
         {
             ArgumentNullException.ThrowIfNull( input );
 
@@ -252,7 +250,7 @@ namespace SteamKit2
             using ( var ms = new MemoryStream() )
             {
                 ms.Write( iv, iv.Length - 3, 3 );
-                ms.Write( plaintextData, 0, plaintextData.Length );
+                ms.Write( plaintextData );
                 ms.Seek( 0, SeekOrigin.Begin );
 
                 hmacBytes = hmac.ComputeHash( ms );
@@ -269,7 +267,7 @@ namespace SteamKit2
         /// <summary>
         /// Decrypts using AES/CBC/PKCS7 with an input byte array and key, using the random IV prepended using AES/ECB/None
         /// </summary>
-        static byte[] SymmetricDecrypt( ReadOnlySpan<byte> input, byte[] key, out byte[] iv )
+        static ArraySegment<byte> SymmetricDecrypt( ReadOnlySpan<byte> input, byte[] key, out byte[] iv )
         {
             DebugLog.Assert( key.Length == 32, "CryptoHelper", "SymmetricDecrypt used with non 32 byte key!" );
 
@@ -312,21 +310,21 @@ namespace SteamKit2
 
                 int len = cs.ReadAll( plaintext );
 
-                byte[] output = new byte[ len ];
-                Array.Copy( plaintext, 0, output, 0, len );
+                byte[] buffer = ArrayPool<byte>.Shared.Rent( len );
+                Array.Copy( plaintext, 0, buffer, 0, len );
 
                 ArrayPool<byte>.Shared.Return( cipherText );
                 ArrayPool<byte>.Shared.Return(cryptedIv);
                 ArrayPool<byte>.Shared.Return(plaintext);
 
-                return output;
+                return new ArraySegment<byte>(buffer, 0, len);
             }
         }
 
         /// <summary>
         /// Verifies and performs a symmetricdecrypt on the input using the given password as a key
         /// </summary>
-        public static byte[]? VerifyAndDecryptPassword( byte[] input, string password )
+        public static ArraySegment<byte>? VerifyAndDecryptPassword( byte[] input, string password )
         {
             ArgumentNullException.ThrowIfNull( input );
 

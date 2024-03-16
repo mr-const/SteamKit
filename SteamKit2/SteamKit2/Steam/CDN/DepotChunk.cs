@@ -4,6 +4,7 @@
  */
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Linq;
 using SixLabors.ImageSharp.Compression.Zlib;
@@ -13,7 +14,7 @@ namespace SteamKit2.CDN
     /// <summary>
     /// Represents a single downloaded chunk from a file in a depot.
     /// </summary>
-    public sealed class DepotChunk
+    public sealed class DepotChunk : IDisposable
     {
         /// <summary>
         /// Gets the depot manifest chunk information associated with this chunk.
@@ -31,14 +32,14 @@ namespace SteamKit2.CDN
         /// <summary>
         /// Gets the underlying data for this chunk.
         /// </summary>
-        public byte[] Data { get; private set; }
+        public ArraySegment<byte> Data { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DepotChunk"/> class.
         /// </summary>
         /// <param name="info">The manifest chunk information associated with this chunk.</param>
         /// <param name="data">The underlying data for this chunk.</param>
-        public DepotChunk( DepotManifest.ChunkData info, byte[] data )
+        public DepotChunk( DepotManifest.ChunkData info, ArraySegment<byte> data )
         {
             ArgumentNullException.ThrowIfNull( info );
 
@@ -46,6 +47,14 @@ namespace SteamKit2.CDN
 
             ChunkInfo = info;
             Data = data;
+        }
+
+        /// <summary>
+        /// Disposes of this object and returns the underlying data to the shared pool.
+        /// </summary>
+        public void Dispose()
+        {
+            ArrayPool<byte>.Shared.Return( Data.Array! );
         }
 
         /// <summary>
@@ -63,9 +72,9 @@ namespace SteamKit2.CDN
                 return;
             }
 
-            byte[] processedData = CryptoHelper.SymmetricDecrypt( Data, depotKey );
+            ArraySegment<byte> processedData = CryptoHelper.SymmetricDecrypt( Data, depotKey );
 
-            if ( processedData.Length > 1 && processedData[ 0 ] == 'V' && processedData[ 1 ] == 'Z' )
+            if ( processedData.Count > 1 && processedData[ 0 ] == 'V' && processedData[ 1 ] == 'Z' )
             {
                 processedData = VZipUtil.Decompress( processedData );
             }

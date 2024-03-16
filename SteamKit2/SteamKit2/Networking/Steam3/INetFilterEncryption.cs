@@ -5,11 +5,13 @@
 
 
 
+using System;
+
 namespace SteamKit2
 {
     interface INetFilterEncryption
     {
-        byte[] ProcessIncoming( byte[] data );
+        ArraySegment<byte> ProcessIncoming( byte[] data );
         byte[] ProcessOutgoing( byte[] data );
     }
 }

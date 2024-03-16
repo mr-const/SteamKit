@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.IO;
 using System.IO.Hashing;
@@ -15,7 +16,7 @@ namespace SteamKit2
         private static char Version = 'a';
 
 
-        public static byte[] Decompress(ReadOnlySpan<byte> buffer)
+        public static ArraySegment<byte> Decompress(ArraySegment<byte> buffer)
         {
             if ( BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(0)) != VZipHeader )
             {
@@ -34,7 +35,7 @@ namespace SteamKit2
             int offset = 7;
             ReadOnlySpan<byte> properties = buffer.Slice(offset, 5);
             offset += properties.Length;
-            ReadOnlySpan<byte> compressedBuffer = buffer.Slice(offset, ( int )buffer.Length - HeaderLength - FooterLength - 5 );
+            ReadOnlySpan<byte> compressedBuffer = buffer.Slice(offset, ( int )buffer.Count - HeaderLength - FooterLength - 5 );
             offset += compressedBuffer.Length;
 
             uint outputCRC = BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(offset));
@@ -51,11 +52,18 @@ namespace SteamKit2
             SevenZip.Compression.LZMA.Decoder decoder = new SevenZip.Compression.LZMA.Decoder();
             decoder.SetDecoderProperties( properties );
 
+            ArraySegment<byte> outData = new ArraySegment<byte>(
+                    ArrayPool<byte>.Shared.Rent( ( int )sizeDecompressed ),
+                    0,
+                    ( int )sizeDecompressed
+                );
+
             using MemoryStream inputStream = new MemoryStream( compressedBuffer.ToArray() );
-            using MemoryStream outStream = new MemoryStream( ( int )sizeDecompressed );
+            using MemoryStream outStream = new MemoryStream( outData.Array!, outData.Offset, outData.Count );
             decoder.Code( inputStream, outStream, compressedBuffer.Length, sizeDecompressed, null );
 
-            var outData = outStream.ToArray();
+            ArrayPool<byte>.Shared.Return( buffer.Array! );
+
             if ( Crc32.HashToUInt32( outData ) != outputCRC )
             {
                 throw new InvalidDataException( "CRC does not match decompressed data. VZip data may be corrupted." );
