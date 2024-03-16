@@ -5,6 +5,7 @@
 
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using SixLabors.ImageSharp.Compression.Zlib;
@@ -49,12 +50,19 @@ namespace SteamKit2.CDN
             Data = data;
         }
 
+        private bool disposed = false;
         /// <summary>
         /// Disposes of this object and returns the underlying data to the shared pool.
         /// </summary>
         public void Dispose()
         {
             ArrayPool<byte>.Shared.Return( Data.Array! );
+            disposed = true;
+        }
+
+        ~DepotChunk()
+        {
+            Debug.Assert(disposed, "DepotChunk was not disposed!");
         }
 
         /// <summary>
@@ -73,6 +81,7 @@ namespace SteamKit2.CDN
             }
 
             ArraySegment<byte> processedData = CryptoHelper.SymmetricDecrypt( Data, depotKey );
+            ArrayPool<byte>.Shared.Return( Data.Array! );
 
             if ( processedData.Count > 1 && processedData[ 0 ] == 'V' && processedData[ 1 ] == 'Z' )
             {

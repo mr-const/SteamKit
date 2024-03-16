@@ -35,8 +35,8 @@ namespace SteamKit2
             int offset = 7;
             ReadOnlySpan<byte> properties = buffer.Slice(offset, 5);
             offset += properties.Length;
-            ReadOnlySpan<byte> compressedBuffer = buffer.Slice(offset, ( int )buffer.Count - HeaderLength - FooterLength - 5 );
-            offset += compressedBuffer.Length;
+            ArraySegment<byte> compressedBuffer = buffer.Slice(offset, ( int )buffer.Count - HeaderLength - FooterLength - 5 );
+            offset += compressedBuffer.Count;
 
             uint outputCRC = BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(offset));
             offset += 4;
@@ -58,9 +58,9 @@ namespace SteamKit2
                     ( int )sizeDecompressed
                 );
 
-            using MemoryStream inputStream = new MemoryStream( compressedBuffer.ToArray() );
+            using MemoryStream inputStream = new MemoryStream( compressedBuffer.Array!, compressedBuffer.Offset, compressedBuffer.Count );
             using MemoryStream outStream = new MemoryStream( outData.Array!, outData.Offset, outData.Count );
-            decoder.Code( inputStream, outStream, compressedBuffer.Length, sizeDecompressed, null );
+            decoder.Code( inputStream, outStream, compressedBuffer.Count, sizeDecompressed, null );
 
             ArrayPool<byte>.Shared.Return( buffer.Array! );
 

@@ -184,7 +184,7 @@ namespace SteamKit2.CDN
 
                 await response.Content.LoadIntoBufferAsync().ConfigureAwait( false );
 
-                byte[] buffer = ArrayPool<byte>.Shared.Rent( 8 * 1024 * 1024 ); // 2MB
+                byte[] buffer = ArrayPool<byte>.Shared.Rent( 8 * 1024 * 1024 ); // 8MB
 
                 int read = await response.Content.ReadAsStream().ReadAsync(buffer, 0, buffer.Length, cts.Token).ConfigureAwait( false );
 

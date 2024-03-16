@@ -2,6 +2,8 @@
 // LzOutWindow.cs
 #nullable disable
 
+using System.Buffers;
+
 namespace SevenZip.Compression.LZ
 {
 	class OutWindow
@@ -19,9 +21,12 @@ namespace SevenZip.Compression.LZ
 			if (_windowSize != windowSize)
 			{
 				// System.GC.Collect();
-				_buffer = new byte[windowSize];
-			}
-			_windowSize = windowSize;
+                if (_buffer != null)
+                    ArrayPool<byte>.Shared.Return(_buffer);
+
+                _buffer = ArrayPool<byte>.Shared.Rent( ( int )windowSize );
+            }
+            _windowSize = windowSize;
 			_pos = 0;
 			_streamPos = 0;
 		}
