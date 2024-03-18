@@ -30,7 +30,6 @@ namespace SteamKit2
         /// Receiver is responsible for releasing the output buffer.
         /// </summary>
         /// <param name="input"></param>
-        /// <param name="output"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         public static ArraySegment<byte> Decompress( ArraySegment<byte> input )
@@ -284,7 +283,6 @@ namespace SteamKit2
 
             deflateStream.ReadAll( inflatedSegment );
 
-            ArrayPool<byte>.Shared.Return( compressedBuffer.Array! );
             return inflatedSegment;
         }
 
