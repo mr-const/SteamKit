@@ -92,17 +92,22 @@ namespace SteamKit2.CDN
                 processedData = ZipUtil.Decompress( processedData );
             }
 
+            Data = processedData;
+            VerifyChecksum();
+
+            IsProcessed = true;
+        }
+
+        public void VerifyChecksum()
+        {
             DebugLog.Assert( ChunkInfo.Checksum != null, nameof( DepotChunk ), "Expected data chunk to have a checksum." );
 
-            uint crc = Adler32.Calculate( 0, processedData );
+            uint crc = Adler32.Calculate( 0, Data );
 
             if ( crc != ChunkInfo.Checksum )
             {
                 throw new InvalidDataException( "Processed data checksum is incorrect! Downloaded depot chunk is corrupt or invalid/wrong depot key?" );
             }
-
-            Data = processedData;
-            IsProcessed = true;
         }
     }
 }

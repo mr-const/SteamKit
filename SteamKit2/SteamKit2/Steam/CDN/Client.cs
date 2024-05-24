@@ -139,13 +139,21 @@ namespace SteamKit2.CDN
 
             var chunkData = await DoRawCommandAsync( server, string.Format( "depot/{0}/chunk/{1}", depotId, chunkID ), proxyServer ).ConfigureAwait( false );
 
+            var depotChunk = new DepotChunk( chunk, chunkData );
+
+            // In case we download locally - data is not compressed and we don't need to process it
+            if ( chunk.UncompressedLength == chunkData.Count )
+            {
+                depotChunk.VerifyChecksum();
+                depotChunk.IsProcessed = true;
+                return depotChunk;
+            }
+
             // assert that lengths match only if the chunk has a length assigned.
             if ( chunk.CompressedLength > 0 && chunkData.Count != chunk.CompressedLength )
             {
                 throw new InvalidDataException( $"Length mismatch after downloading depot chunk! (was {chunkData.Count}, but should be {chunk.CompressedLength})" );
             }
-
-            var depotChunk = new DepotChunk( chunk, chunkData );
 
             if ( depotKey != null )
             {
