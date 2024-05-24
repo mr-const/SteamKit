@@ -33,14 +33,14 @@ namespace SteamKit2.CDN
         /// <summary>
         /// Initializes a new instance of the <see cref="Client"/> class.
         /// </summary>
-        /// <param name="steamClient">
-        /// The <see cref="SteamClient"/> this instance will be associated with.
-        /// The SteamClient instance must be connected and logged onto Steam.</param>
-        public Client( SteamClient steamClient )
+        /// <param name="httpClient">
+        /// The <see cref="HttpClient"/> this instance will be associated with.
+        /// The HttpClient instance must be connected and logged onto Steam.</param>
+        public Client( HttpClient httpClient )
         {
-            ArgumentNullException.ThrowIfNull( steamClient );
+            ArgumentNullException.ThrowIfNull( httpClient );
 
-            this.httpClient = steamClient.Configuration.HttpClientFactory();
+            this.httpClient = httpClient;
         }
 
         /// <summary>
