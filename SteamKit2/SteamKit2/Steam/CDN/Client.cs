@@ -119,12 +119,15 @@ namespace SteamKit2.CDN
         /// The depot decryption key for the depot that will be downloaded.
         /// This is used for decrypting filenames (if needed) in depot manifests, and processing depot chunks.
         /// </param>
+        /// <param name="isLocal">
+        /// If true, the data is downloaded from neighboring instance and we don't need to decrypt and decompress it.
+        /// </param>
         /// <param name="proxyServer">Optional content server marked as UseAsProxy which transforms the request.</param>
         /// <exception cref="System.ArgumentNullException">chunk's <see cref="DepotManifest.ChunkData.ChunkID"/> was null.</exception>
         /// <exception cref="System.IO.InvalidDataException">Thrown if the downloaded data does not match the expected length.</exception>
         /// <exception cref="HttpRequestException">An network error occurred when performing the request.</exception>
         /// <exception cref="SteamKitWebRequestException">A network error occurred when performing the request.</exception>
-        public async Task<DepotChunk> DownloadDepotChunkAsync( uint depotId, DepotManifest.ChunkData chunk, Server server, byte[]? depotKey = null, Server? proxyServer = null )
+        public async Task<DepotChunk> DownloadDepotChunkAsync( uint depotId, DepotManifest.ChunkData chunk, Server server, byte[]? depotKey = null, Server? proxyServer = null, bool isLocal = false )
         {
             ArgumentNullException.ThrowIfNull( server );
 
@@ -142,7 +145,7 @@ namespace SteamKit2.CDN
             var depotChunk = new DepotChunk( chunk, chunkData );
 
             // In case we download locally - data is not compressed and we don't need to process it
-            if ( chunk.UncompressedLength == chunkData.Count )
+            if ( isLocal )
             {
                 depotChunk.VerifyChecksum();
                 depotChunk.IsProcessed = true;
