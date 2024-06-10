@@ -147,7 +147,16 @@ namespace SteamKit2.CDN
             // In case we download locally - data is not compressed and we don't need to process it
             if ( isLocal )
             {
-                depotChunk.VerifyChecksum();
+                try
+                {
+                    depotChunk.VerifyChecksum();
+                }
+                catch(Exception)
+                {
+                   depotChunk.Dispose();
+                    throw;
+                }
+
                 depotChunk.IsProcessed = true;
                 return depotChunk;
             }
@@ -155,13 +164,22 @@ namespace SteamKit2.CDN
             // assert that lengths match only if the chunk has a length assigned.
             if ( chunk.CompressedLength > 0 && chunkData.Count != chunk.CompressedLength )
             {
+                depotChunk.Dispose();
                 throw new InvalidDataException( $"Length mismatch after downloading depot chunk! (was {chunkData.Count}, but should be {chunk.CompressedLength})" );
             }
 
             if ( depotKey != null )
             {
-                // if we have the depot key, we can process the chunk immediately
-                depotChunk.Process( depotKey );
+                try
+                {
+                    // if we have the depot key, we can process the chunk immediately
+                    depotChunk.Process( depotKey );
+                }
+                catch(Exception)
+                {
+                    depotChunk.Dispose();
+                    throw;
+                }
             }
 
             return depotChunk;
