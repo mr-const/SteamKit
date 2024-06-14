@@ -7,6 +7,7 @@ using System;
 using System.Buffers;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -195,14 +196,13 @@ namespace SteamKit2.CDN
         async Task<ArraySegment<byte>> DoRawCommandAsync( Server server, string command, Server? proxyServer )
         {
             var url = BuildCommand( server, command, proxyServer );
-            using var request = new HttpRequestMessage( HttpMethod.Get, url );
 
             using var cts = new CancellationTokenSource();
             cts.CancelAfter( RequestTimeout );
 
             try
             {
-                using var response = await httpClient.SendAsync( request, HttpCompletionOption.ResponseHeadersRead, cts.Token ).ConfigureAwait( false );
+                using var response = await httpClient.GetAsync( url, HttpCompletionOption.ResponseHeadersRead, cts.Token ).ConfigureAwait( false );
 
                 if ( !response.IsSuccessStatusCode )
                 {
