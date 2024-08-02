@@ -6,8 +6,6 @@
 using System;
 using System.Buffers;
 using System.IO;
-using System.IO.Compression;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -152,9 +150,9 @@ namespace SteamKit2.CDN
                 {
                     depotChunk.VerifyChecksum();
                 }
-                catch(Exception)
+                catch ( Exception )
                 {
-                   depotChunk.Dispose();
+                    depotChunk.Dispose();
                     throw;
                 }
 
@@ -176,7 +174,7 @@ namespace SteamKit2.CDN
                     // if we have the depot key, we can process the chunk immediately
                     depotChunk.Process( depotKey );
                 }
-                catch(Exception)
+                catch ( Exception )
                 {
                     depotChunk.Dispose();
                     throw;
@@ -211,14 +209,22 @@ namespace SteamKit2.CDN
 
                 cts.CancelAfter( ResponseBodyTimeout );
 
-                await response.Content.LoadIntoBufferAsync().ConfigureAwait( false );
+                // await response.Content.LoadIntoBufferAsync().ConfigureAwait( false );
 
-                int bufferSize = (int?)response.Content.Headers?.ContentLength ?? 2 * 1024 * 1024;
+                int bufferSize = ( int? )response.Content.Headers?.ContentLength ?? 2 * 1024 * 1024;
                 byte[] buffer = ArrayPool<byte>.Shared.Rent( bufferSize );
 
-                int read = await response.Content.ReadAsStream().ReadAsync(buffer, 0, buffer.Length, cts.Token).ConfigureAwait( false );
+                var stream = response.Content.ReadAsStream();
+                int bytesRead = 0;
+                int offset = 0;
+                do
+                {
+                    bytesRead = await stream.ReadAsync( buffer.AsMemory()[offset..], cts.Token ).ConfigureAwait( false );
+                    offset += bytesRead;
+                }
+                while ( bytesRead != 0 );
 
-                return new ArraySegment<byte>( buffer, 0, read );
+                return new ArraySegment<byte>( buffer, 0, offset );
             }
             catch ( Exception ex )
             {
