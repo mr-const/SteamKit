@@ -106,7 +106,7 @@ namespace SteamKit2.CDN
 
             if ( crc != ChunkInfo.Checksum )
             {
-                throw new InvalidDataException( "Processed data checksum is incorrect! Downloaded depot chunk is corrupt or invalid/wrong depot key?" );
+                throw new InvalidDataException( $"Processed data checksum is incorrect! Expected {ChunkInfo.Checksum:X}, but got {crc:X}. Downloaded depot chunk is corrupt or invalid/wrong depot key?" );
             }
         }
     }
