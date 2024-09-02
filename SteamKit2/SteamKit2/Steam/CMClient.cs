@@ -623,6 +623,9 @@ namespace SteamKit2.Internal
             LogDebug( "SteamClient", "A server of type '{0}' was not available for request: '{1}'",
                 msgServerUnavailable.Body.EServerTypeUnavailable, ( EMsg )msgServerUnavailable.Body.EMsgSent );
             Disconnect( userInitiated: false );
+
+            DebugLog.Assert( connection != null, nameof( CMClient ), "No connection object during HandleServerUnavailable." );
+            Servers.TryMark( connection.CurrentEndPoint, connection.ProtocolTypes, ServerQuality.Bad );
         }
 
         void HandleCMList( IPacketMsg packetMsg )

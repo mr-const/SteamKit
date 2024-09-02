@@ -29,7 +29,7 @@ namespace SteamKit2.Discovery
     /// </summary>
     public class SmartCMServerList
     {
-        [DebuggerDisplay("ServerInfo ({EndPoint}, {Protocol}, Bad: {LastBadConnectionDateTimeUtc.HasValue})")]
+        [DebuggerDisplay( "ServerInfo ({Record.EndPoint}, {Protocol}, Bad: {LastBadConnectionTimeUtc.HasValue})" )]
         class ServerInfo
         {
             public ServerInfo( ServerRecord record, ProtocolTypes protocolType )
