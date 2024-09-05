@@ -66,10 +66,8 @@ namespace SteamKit2.CDN
         /// <exception cref="System.ArgumentNullException"><see ref="server"/> was null.</exception>
         /// <exception cref="HttpRequestException">An network error occurred when performing the request.</exception>
         /// <exception cref="SteamKitWebRequestException">A network error occurred when performing the request.</exception>
-        public async Task<DepotManifest> DownloadManifestAsync( uint depotId, ulong manifestId, ulong manifestRequestCode, Server server, byte[]? depotKey = null, Server? proxyServer = null )
+        public async Task<DepotManifest> DownloadManifestAsync( uint depotId, ulong manifestId, ulong manifestRequestCode, Server? server, byte[]? depotKey = null, Server? proxyServer = null )
         {
-            ArgumentNullException.ThrowIfNull( server );
-
             const uint MANIFEST_VERSION = 5;
             string url;
 
@@ -126,10 +124,8 @@ namespace SteamKit2.CDN
         /// <exception cref="System.IO.InvalidDataException">Thrown if the downloaded data does not match the expected length.</exception>
         /// <exception cref="HttpRequestException">An network error occurred when performing the request.</exception>
         /// <exception cref="SteamKitWebRequestException">A network error occurred when performing the request.</exception>
-        public async Task<DepotChunk> DownloadDepotChunkAsync( uint depotId, DepotManifest.ChunkData chunk, Server server, byte[]? depotKey = null, Server? proxyServer = null, bool isLocal = false )
+        public async Task<DepotChunk> DownloadDepotChunkAsync( uint depotId, DepotManifest.ChunkData chunk, Server? server, byte[]? depotKey = null, Server? proxyServer = null, bool isLocal = false )
         {
-            ArgumentNullException.ThrowIfNull( server );
-
             ArgumentNullException.ThrowIfNull( chunk );
 
             if ( chunk.ChunkID == null )
@@ -191,7 +187,7 @@ namespace SteamKit2.CDN
         /// <param name="command"></param>
         /// <param name="proxyServer"></param>
         /// <returns></returns>
-        async Task<ArraySegment<byte>> DoRawCommandAsync( Server server, string command, Server? proxyServer )
+        async Task<ArraySegment<byte>> DoRawCommandAsync( Server? server, string command, Server? proxyServer )
         {
             var url = BuildCommand( server, command, proxyServer );
 
@@ -233,8 +229,11 @@ namespace SteamKit2.CDN
             }
         }
 
-        static Uri BuildCommand( Server server, string command, Server? proxyServer )
+        static Uri BuildCommand( Server? server, string command, Server? proxyServer )
         {
+            if ( server == null )
+                return new Uri(command, UriKind.Relative);
+
             var uriBuilder = new UriBuilder
             {
                 Scheme = server.Protocol == Server.ConnectionProtocol.HTTP ? "http" : "https",
