@@ -6,6 +6,8 @@
 
 
 using System;
+using System.Buffers;
+using System.IO;
 using System.Security.Cryptography;
 
 namespace SteamKit2
@@ -18,7 +20,7 @@ namespace SteamKit2
         /// <summary>
         /// Decrypts using AES/CBC/PKCS7 with an input byte array and key, using the random IV prepended using AES/ECB/None
         /// </summary>
-        public static byte[] SymmetricDecrypt( ReadOnlySpan<byte> input, byte[] key )
+        public static ArraySegment<byte> SymmetricDecrypt( ReadOnlySpan<byte> input, byte[] key)
         {
             ArgumentNullException.ThrowIfNull( key );
 
@@ -33,7 +35,11 @@ namespace SteamKit2
             Span<byte> iv = stackalloc byte[ 16 ];
             aes.DecryptEcb( input[ ..iv.Length ], iv, PaddingMode.None );
             
-            return aes.DecryptCbc( input[ iv.Length.. ], iv, PaddingMode.PKCS7 );
+            byte[] decrypted = aes.DecryptCbc( input[ iv.Length.. ], iv, PaddingMode.PKCS7 );
+            byte[] buffer = ArrayPool<byte>.Shared.Rent( decrypted.Length );
+            Array.Copy(decrypted, buffer, decrypted.Length);
+
+            return new ArraySegment<byte>( buffer, 0, decrypted.Length );
         }
     }
 }
