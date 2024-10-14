@@ -9,7 +9,7 @@ using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 
 #pragma warning disable IDE0007 // Use implicit type
-namespace SixLabors.ImageSharp.Compression.Zlib;
+namespace SteamKit2.Util;
 
 /// <summary>
 /// Calculates the 32 bit Adler checksum of a given buffer according to
@@ -231,8 +231,8 @@ public static class Adler32
                 vs3 = Avx2.ShiftLeftLogical( vs3, 5 );
                 vs2 = Avx2.Add( vs2, vs3 );
 
-                s1 = ( uint )Numerics.EvenReduceSum( vs1.AsInt32() );
-                s2 = ( uint )Numerics.ReduceSum( vs2.AsInt32() );
+                s1 = ( uint )EvenReduceSum( vs1.AsInt32() );
+                s2 = ( uint )ReduceSum( vs2.AsInt32() );
 
                 s1 %= BASE;
                 s2 %= BASE;
@@ -432,6 +432,41 @@ public static class Adler32
 
             return ( s2 << 16 ) | s1;
         }
+    }
+
+    /// <summary>
+    /// Reduces even elements of the vector into one sum.
+    /// </summary>
+    /// <param name="accumulator">The accumulator to reduce.</param>
+    /// <returns>The sum of even elements.</returns>
+    [MethodImpl( MethodImplOptions.AggressiveInlining )]
+    public static int EvenReduceSum( Vector256<int> accumulator )
+    {
+        Vector128<int> vsum = Sse2.Add( accumulator.GetLower(), accumulator.GetUpper() ); // add upper lane to lower lane
+        vsum = Sse2.Add( vsum, Sse2.Shuffle( vsum, 0b_11_10_11_10 ) );                      // add high to low
+
+        // Vector128<int>.ToScalar() isn't optimized pre-net5.0 https://github.com/dotnet/runtime/pull/37882
+        return Sse2.ConvertToInt32( vsum );
+    }
+
+    /// <summary>
+    /// Reduces elements of the vector into one sum.
+    /// </summary>
+    /// <param name="accumulator">The accumulator to reduce.</param>
+    /// <returns>The sum of all elements.</returns>
+    [MethodImpl( MethodImplOptions.AggressiveInlining )]
+    public static int ReduceSum( Vector256<int> accumulator )
+    {
+        // Add upper lane to lower lane.
+        Vector128<int> vsum = Sse2.Add( accumulator.GetLower(), accumulator.GetUpper() );
+
+        // Add odd to even.
+        vsum = Sse2.Add( vsum, Sse2.Shuffle( vsum, 0b_11_11_01_01 ) );
+
+        // Add high to low.
+        vsum = Sse2.Add( vsum, Sse2.Shuffle( vsum, 0b_11_10_11_10 ) );
+
+        return Sse2.ConvertToInt32( vsum );
     }
 
     /// <summary>

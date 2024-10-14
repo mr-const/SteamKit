@@ -9,6 +9,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using SteamKit2.Util;
 
 namespace SteamKit2
 {
@@ -19,14 +20,7 @@ namespace SteamKit2
         /// </summary>
         public static uint AdlerHash( ReadOnlySpan<byte> input )
         {
-            uint a = 0, b = 0;
-            for ( int i = 0; i < input.Length; i++ )
-            {
-                a = ( a + input[ i ] ) % 65521;
-                b = ( b + a ) % 65521;
-            }
-
-            return a | ( b << 16 );
+            return Adler32.Calculate( 0, input );
         }
 
         public static string EncodeHexString(byte[] input)
