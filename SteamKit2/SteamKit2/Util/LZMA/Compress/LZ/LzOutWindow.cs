@@ -2,8 +2,6 @@
 // LzOutWindow.cs
 #nullable disable
 
-using System.Buffers;
-
 namespace SevenZip.Compression.LZ
 {
 	class OutWindow
@@ -16,17 +14,22 @@ namespace SevenZip.Compression.LZ
 
 		public uint TrainSize = 0;
 
+		internal void SteamKitSetBuffer(byte[] buffer, uint windowSize) // Added by SteamKit to avoid allocating a byte array
+		{
+			_buffer = buffer;
+			_windowSize = windowSize;
+			_pos = 0;
+			_streamPos = 0;
+		}
+
 		public void Create(uint windowSize)
 		{
 			if (_windowSize != windowSize)
 			{
 				// System.GC.Collect();
-                if (_buffer != null)
-                    ArrayPool<byte>.Shared.Return(_buffer);
-
-                _buffer = ArrayPool<byte>.Shared.Rent( ( int )windowSize );
-            }
-            _windowSize = windowSize;
+				_buffer = new byte[windowSize];
+			}
+			_windowSize = windowSize;
 			_pos = 0;
 			_streamPos = 0;
 		}

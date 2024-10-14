@@ -31,7 +31,7 @@ namespace SteamKit2.Discovery
         /// <returns>The <see cref="IPAddress"/> of the associated endpoint.</returns>
         public string GetHost()
         {
-            return NetHelpers.ExtractEndpointHost( EndPoint ).host;
+            return NetHelpers.ExtractEndpointHost( EndPoint );
         }
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace SteamKit2.Discovery
         /// <returns>The port numer of the associated endpoint.</returns>
         public int GetPort()
         {
-            return NetHelpers.ExtractEndpointHost( EndPoint ).port;
+            return NetHelpers.ExtractEndpointPort( EndPoint );
         }
 
         /// <summary>
@@ -91,8 +91,8 @@ namespace SteamKit2.Discovery
         /// </summary>
         /// <param name="address">The name and port of the server</param>
         /// <returns>A new <see cref="ServerRecord"/> instance</returns>
-        public static ServerRecord CreateDnsSocketServer( string address )
-            => CreateServerFromDns( address, ProtocolTypes.Tcp | ProtocolTypes.Udp );
+        public static ServerRecord CreateDnsSocketServer(string address)
+            => CreateServerFromDns(address, ProtocolTypes.Tcp | ProtocolTypes.Udp);
 
         /// <summary>
         /// Creates a WebSocket server given an address in the form of "hostname:port".
@@ -100,7 +100,7 @@ namespace SteamKit2.Discovery
         /// <param name="address">The name and port of the server</param>
         /// <returns>A new <see cref="ServerRecord"/> instance</returns>
         public static ServerRecord CreateWebSocketServer(string address)
-            => CreateServerFromDns( address, ProtocolTypes.WebSocket );
+            => CreateServerFromDns(address, ProtocolTypes.WebSocket);
 
         /// <summary>
         /// Creates a WebSocket server given an address in the form of "hostname:port".
@@ -108,14 +108,14 @@ namespace SteamKit2.Discovery
         /// <param name="address">The name and port of the server</param>
         /// <param name="protocolTypes">The protocol types that this server supports.</param>
         /// <returns>A new <see cref="ServerRecord"/> instance</returns>
-        private static ServerRecord CreateServerFromDns( string address, ProtocolTypes protocolTypes )
+        private static ServerRecord CreateServerFromDns(string address, ProtocolTypes protocolTypes)
         {
             ArgumentNullException.ThrowIfNull( address );
 
             EndPoint endPoint;
             const int DefaultPort = 443;
 
-            var indexOfColon = address.IndexOf(':');
+            var indexOfColon = address.IndexOf(':', StringComparison.Ordinal);
             if (indexOfColon >= 0)
             {
                 var hostname = address[ ..indexOfColon ];
@@ -133,7 +133,7 @@ namespace SteamKit2.Discovery
                 endPoint = new DnsEndPoint(address, DefaultPort);
             }
 
-            return new ServerRecord( endPoint, protocolTypes );
+            return new ServerRecord(endPoint, protocolTypes);
         }
 
         #region Equality and Hashing

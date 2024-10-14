@@ -73,6 +73,7 @@ namespace SteamKit2
             foreach ( var child in socketList.Children )
             {
                 var endpoint = child[ "endpoint" ].Value;
+
                 if ( endpoint == null )
                 {
                     continue;

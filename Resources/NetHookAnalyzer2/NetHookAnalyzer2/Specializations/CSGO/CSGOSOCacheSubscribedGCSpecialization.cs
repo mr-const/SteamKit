@@ -10,7 +10,7 @@ namespace NetHookAnalyzer2.Specializations
     {
         public IEnumerable<KeyValuePair<string, object>> GetExtraObjects(object body, uint appID)
         {
-            if (appID != WellKnownAppIDs.CounterStrikeGlobalOffensive)
+            if (appID != WellKnownAppIDs.CounterStrike2)
             {
                 yield break;
             }
@@ -35,7 +35,7 @@ namespace NetHookAnalyzer2.Specializations
             }
         }
 
-        object ReadExtraObject(byte[] sharedObject, int typeId)
+        static object ReadExtraObject(byte[] sharedObject, int typeId)
         {
             try
             {

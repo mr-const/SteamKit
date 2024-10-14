@@ -50,7 +50,7 @@ namespace SteamKit2
             }
 
             SevenZip.Compression.LZMA.Decoder decoder = new SevenZip.Compression.LZMA.Decoder();
-            decoder.SetDecoderProperties( properties );
+            decoder.SetDecoderProperties( properties.ToArray() );
 
             ArraySegment<byte> outData = new ArraySegment<byte>(
                     ArrayPool<byte>.Shared.Rent( ( int )sizeDecompressed ),
