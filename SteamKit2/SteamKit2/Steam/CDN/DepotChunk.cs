@@ -79,19 +79,24 @@ namespace SteamKit2.CDN
                 return;
             }
 
-            ArraySegment<byte> processedData = CryptoHelper.SymmetricDecrypt( Data, depotKey );
+            ArraySegment<byte> buffer = CryptoHelper.SymmetricDecrypt( Data, depotKey );
             ArrayPool<byte>.Shared.Return( Data.Array! );
 
-            if ( processedData.Count > 1 && processedData[ 0 ] == 'V' && processedData[ 1 ] == 'Z' )
+            if ( buffer.Count > 2  && buffer[ 0 ] == 'V' && buffer[ 1 ] == 'S' && buffer[ 2 ] == 'Z' && buffer[ 3 ] == 'a' ) // Zstd
+
             {
-                processedData = VZipUtil.Decompress( processedData );
+                buffer = VZstdUtil.Decompress( buffer, verifyChecksum: false );
+            }
+            else if ( buffer.Count > 1 && buffer[ 0 ] == 'V' && buffer[ 1 ] == 'Z' && buffer[ 2 ] == 'a' )
+            {
+                buffer = VZipUtil.Decompress( buffer );
             }
             else
             {
-                processedData = ZipUtil.Decompress( processedData );
+                buffer = ZipUtil.Decompress( buffer );
             }
 
-            Data = processedData;
+            Data = buffer;
             VerifyChecksum();
 
             IsProcessed = true;
