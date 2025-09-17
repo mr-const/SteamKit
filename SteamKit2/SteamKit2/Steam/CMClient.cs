@@ -274,7 +274,10 @@ namespace SteamKit2.Internal
 
             // const: changed to simple logging, because otherwise session will hang forever
             if (!IsConnected)
+            {
                 DebugLog.WriteLine( nameof( CMClient ), "Send() was called while not connected to Steam." );
+                return;
+            }
 
             var sessionID = this.SessionID;
 
