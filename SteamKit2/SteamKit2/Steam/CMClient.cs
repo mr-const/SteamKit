@@ -275,9 +275,9 @@ namespace SteamKit2.Internal
             // const: changed to simple logging, because otherwise session will hang forever
             if (!IsConnected)
             {
-                DebugLog.WriteLine( nameof( CMClient ), "Send() was called while not connected to Steam. (Forcing connection to disconnect)" );
+                DebugLog.WriteLine( nameof( CMClient ), "Send({0}) was called while not connected to Steam. (Forcing connection to disconnect)", msg.MsgType );
                 // the download hangs forever otherwise, Disconnect() doesn't work
-                throw new InvalidOperationException( "Send() was called while not connected to Steam" );
+                throw new InvalidOperationException( $"Send({msg.MsgType}) was called while not connected to Steam" );
             }
 
             var sessionID = this.SessionID;
