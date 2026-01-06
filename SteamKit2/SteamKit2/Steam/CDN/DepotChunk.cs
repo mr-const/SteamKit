@@ -104,7 +104,7 @@ namespace SteamKit2.CDN
 
         public void VerifyChecksum()
         {
-            DebugLog.Assert( ChunkInfo.Checksum != null, nameof( DepotChunk ), "Expected data chunk to have a checksum." );
+            DebugLog.Assert( ChunkInfo.Checksum != 0, nameof( DepotChunk ), "Expected data chunk to have a checksum." );
 
             uint crc = Utils.AdlerHash( Data );
 
