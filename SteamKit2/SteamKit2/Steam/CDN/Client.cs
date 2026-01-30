@@ -185,6 +185,7 @@ namespace SteamKit2.CDN
         /// </param>
         /// <returns>A <see cref="DepotChunk"/> instance that contains the data for the given chunk.</returns>
         /// <param name="server">The content server to connect to.</param>
+        /// <param name="cancellationToken"></param>
         /// <param name="depotKey">
         /// The depot decryption key for the depot that will be downloaded.
         /// This is used for decrypting filenames (if needed) in depot manifests, and processing depot chunks.
@@ -198,7 +199,7 @@ namespace SteamKit2.CDN
         /// <exception cref="System.IO.InvalidDataException">Thrown if the downloaded data does not match the expected length.</exception>
         /// <exception cref="HttpRequestException">An network error occurred when performing the request.</exception>
         /// <exception cref="SteamKitWebRequestException">A network error occurred when performing the request.</exception>
-        public async Task<DepotChunk> DownloadDepotChunkAsync( uint depotId, DepotManifest.ChunkData chunk, Server? server, byte[]? depotKey = null, Server? proxyServer = null, string? cdnAuthToken = null, bool isLocal = false )
+        public async Task<DepotChunk> DownloadDepotChunkAsync( uint depotId, DepotManifest.ChunkData chunk, Server? server, CancellationToken cancellationToken, byte[]? depotKey = null, Server? proxyServer = null, string? cdnAuthToken = null, bool isLocal = false )
         {
             ArgumentNullException.ThrowIfNull( chunk );
 
@@ -209,7 +210,7 @@ namespace SteamKit2.CDN
 
             var chunkID = Utils.EncodeHexString( chunk.ChunkID );
 
-            var chunkData = await DoRawCommandAsync( server, $"depot/{depotId}/chunk/{chunkID}", proxyServer, cdnAuthToken ).ConfigureAwait( false );
+            var chunkData = await DoRawCommandAsync( server, $"depot/{depotId}/chunk/{chunkID}", proxyServer, cdnAuthToken, cancellationToken ).ConfigureAwait( false );
 
             var depotChunk = new DepotChunk( chunk, chunkData );
 
@@ -260,13 +261,14 @@ namespace SteamKit2.CDN
         /// <param name="server"></param>
         /// <param name="command"></param>
         /// <param name="proxyServer"></param>
+        /// <param name="cancellationToken"></param>
         /// <param name="cdnAuthToken"></param>
         /// <returns></returns>
-        async Task<ArraySegment<byte>> DoRawCommandAsync( Server? server, string command, Server? proxyServer, string? cdnAuthToken = null )
+        async Task<ArraySegment<byte>> DoRawCommandAsync( Server? server, string command, Server? proxyServer, string? cdnAuthToken, CancellationToken cancellationToken )
         {
             var url = BuildCommand( server, command, cdnAuthToken, proxyServer );
 
-            using var cts = new CancellationTokenSource();
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter( RequestTimeout );
 
             try
